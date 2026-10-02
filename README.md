@@ -92,7 +92,7 @@ All endpoints have `@CrossOrigin(origins = "*")` enabled.
 ### 1. Prerequisites
 - Java 17+
 - Maven 3.8+
-- MySQL 8 running locally (default user `root` / password `root`)
+- MySQL 8 running locally
 - Any browser
 - (Optional) VS Code "Live Server" extension or Python's `http.server`
 
