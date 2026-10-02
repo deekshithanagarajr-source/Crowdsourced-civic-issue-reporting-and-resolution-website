@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Issues — Civic Reporter</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="navbar" id="navbar"></header>
+
+  <main class="container">
+    <div class="page-head">
+      <div>
+        <h1>All Issues</h1>
+        <p class="muted">Browse and update the status of reported issues.</p>
+      </div>
+      <a href="create-issue.html"><button class="btn">+ Report new issue</button></a>
+    </div>
+
+    <div id="alert" class="alert"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Reported By</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Update Status</th>
+          </tr>
+        </thead>
+        <tbody id="issuesBody">
+          <tr><td colspan="7" class="empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    requireAuth();
+    renderNavbar("view");
+
+    async function loadIssues() {
+      const tbody = document.getElementById("issuesBody");
+      try {
+        const data = await api("/issues/all");
+        const issues = data.issues || [];
+        if (issues.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" class="empty">No issues reported yet.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = issues.map(i => `
+          <tr>
+            <td>${i.id}</td>
+            <td><strong>${escapeHtml(i.title)}</strong></td>
+            <td>${escapeHtml(i.description)}</td>
+            <td>${escapeHtml(i.username || "—")}</td>
+            <td><span class="badge ${statusClass(i.status)}">${escapeHtml(i.status)}</span></td>
+            <td>${formatDate(i.createdAt)}</td>
+            <td class="actions">
+              <select class="status-select" data-id="${i.id}">
+                <option value="Pending"     ${i.status==="Pending"?"selected":""}>Pending</option>
+                <option value="In Progress" ${i.status==="In Progress"?"selected":""}>In Progress</option>
+                <option value="Resolved"    ${i.status==="Resolved"?"selected":""}>Resolved</option>
+              </select>
+            </td>
+          </tr>
+        `).join("");
+
+        document.querySelectorAll(".status-select").forEach(sel => {
+          sel.addEventListener("change", async (e) => {
+            const id = e.target.dataset.id;
+            const status = e.target.value;
+            try {
+              await api(`/issues/update/${id}`, {
+                method: "PUT",
+                body: JSON.stringify({ status }),
+              });
+              showAlert("alert", "success", `Issue #${id} updated to "${status}".`);
+              setTimeout(() => clearAlert("alert"), 2000);
+            } catch (err) {
+              showAlert("alert", "error", err.message);
+              loadIssues();
+            }
+          });
+        });
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="empty">Failed to load issues: ${escapeHtml(err.message)}</td></tr>`;
+      }
+    }
+
+    loadIssues();
+  </script>
+</body>
+</html>

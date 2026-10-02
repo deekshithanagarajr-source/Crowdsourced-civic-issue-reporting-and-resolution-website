@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Issue — Civic Reporter</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .camera-box { border: 2px dashed #ccc; border-radius: 10px; padding: 16px; text-align: center; margin-bottom: 12px; }
+    #preview { width: 100%; max-height: 260px; object-fit: cover; border-radius: 8px; display: none; margin-top: 10px; }
+    video#camFeed { width: 100%; border-radius: 8px; display: none; }
+    .btn-sm { padding: 8px 14px; font-size: 14px; margin: 4px; border-radius: 6px; border: none; cursor: pointer; background: var(--color-background-secondary, #f0f0f0); }
+    .btn-sm.primary { background: #3b82f6; color: white; }
+    .gps-box { background: var(--color-background-secondary, #f5f5f5); border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 14px; }
+    .gps-box span { color: #3b82f6; font-weight: 500; }
+    #gpsStatus { color: #888; font-size: 13px; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <header class="navbar" id="navbar"></header>
+
+  <main class="container" style="max-width:680px;">
+    <div class="card">
+      <h1>Report a new issue</h1>
+      <p class="muted">Describe the problem clearly so the right team can act on it.</p>
+      <div id="alert" class="alert"></div>
+      <form id="issueForm">
+
+        <div class="field">
+          <label for="title">Title</label>
+          <input type="text" id="title" maxlength="150" required placeholder="e.g. Broken streetlight on Maple St">
+        </div>
+
+        <div class="field">
+          <label for="description">Description</label>
+          <textarea id="description" maxlength="2000" required placeholder="Provide details, location, time noticed, etc."></textarea>
+        </div>
+
+        <!-- GPS Section -->
+        <div class="field">
+          <label>GPS Location</label>
+          <div class="gps-box">
+            <button type="button" class="btn-sm primary" onclick="getLocation()">📍 Capture My Location</button>
+            <div id="gpsStatus">Location not captured yet.</div>
+            <div id="gpsCoords" style="margin-top:6px;font-size:13px;"></div>
+          </div>
+        </div>
+
+        <!-- Photo Section -->
+        <div class="field">
+          <label>Photo</label>
+          <div class="camera-box">
+            <video id="camFeed" autoplay playsinline></video>
+            <img id="preview" alt="Captured photo preview"/>
+            <div style="margin-top:8px;">
+              <button type="button" class="btn-sm primary" onclick="startCamera()">📷 Open Camera</button>
+              <button type="button" class="btn-sm" id="captureBtn" onclick="capturePhoto()" style="display:none;">✅ Capture</button>
+              <button type="button" class="btn-sm" id="retakeBtn" onclick="retakePhoto()" style="display:none;">🔄 Retake</button>
+              <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileUpload(event)">
+              <button type="button" class="btn-sm" onclick="document.getElementById('fileInput').click()">🖼️ Upload Photo</button>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn" type="submit">Submit Issue</button>
+        <a href="dashboard.html"><button class="btn ghost" type="button" style="margin-left:8px;">Cancel</button></a>
+      </form>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    const user = requireAuth();
+    renderNavbar("create");
+
+    let capturedPhoto = null;
+    let capturedLat = null;
+    let capturedLng = null;
+    let stream = null;
+
+    // ---- GPS ----
+    function getLocation() {
+      const status = document.getElementById("gpsStatus");
+      const coords = document.getElementById("gpsCoords");
+      status.textContent = "Fetching location...";
+      if (!navigator.geolocation) {
+        status.textContent = "Geolocation not supported by your browser.";
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          capturedLat = pos.coords.latitude;
+          capturedLng = pos.coords.longitude;
+          status.textContent = "✅ Location captured!";
+          coords.innerHTML = `<span>Lat: ${capturedLat.toFixed(6)}, Lng: ${capturedLng.toFixed(6)}</span>`;
+        },
+        (err) => {
+          status.textContent = "❌ Could not get location. Please allow location access.";
+        }
+      );
+    }
+
+    // ---- Camera ----
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        const video = document.getElementById("camFeed");
+        video.srcObject = stream;
+        video.style.display = "block";
+        document.getElementById("preview").style.display = "none";
+        document.getElementById("captureBtn").style.display = "inline-block";
+        document.getElementById("retakeBtn").style.display = "none";
+      } catch (err) {
+        alert("Cannot access camera. Please allow camera permission.");
+      }
+    }
+
+    function capturePhoto() {
+      const video = document.getElementById("camFeed");
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0);
+      capturedPhoto = canvas.toDataURL("image/jpeg", 0.7);
+      const preview = document.getElementById("preview");
+      preview.src = capturedPhoto;
+      preview.style.display = "block";
+      video.style.display = "none";
+      document.getElementById("captureBtn").style.display = "none";
+      document.getElementById("retakeBtn").style.display = "inline-block";
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    }
+
+    function retakePhoto() {
+      capturedPhoto = null;
+      document.getElementById("preview").style.display = "none";
+      document.getElementById("retakeBtn").style.display = "none";
+      startCamera();
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        capturedPhoto = e.target.result;
+        const preview = document.getElementById("preview");
+        preview.src = capturedPhoto;
+        preview.style.display = "block";
+        document.getElementById("retakeBtn").style.display = "inline-block";
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ---- Submit ----
+    document.getElementById("issueForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearAlert("alert");
+      const title = document.getElementById("title").value.trim();
+      const description = document.getElementById("description").value.trim();
+      try {
+        await api("/issues/create", {
+          method: "POST",
+          body: JSON.stringify({
+            userId: user.id,
+            title,
+            description,
+            latitude: capturedLat,
+            longitude: capturedLng,
+            photo: capturedPhoto
+          }),
+        });
+        showAlert("alert", "success", "Issue submitted successfully. Redirecting…");
+        setTimeout(() => window.location.href = "view-issues.html", 800);
+      } catch (err) {
+        showAlert("alert", "error", err.message);
+      }
+    });
+  </script>
+</body>
+</html>

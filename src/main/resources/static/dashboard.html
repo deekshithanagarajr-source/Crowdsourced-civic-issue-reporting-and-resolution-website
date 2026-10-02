@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Civic Reporter</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="navbar" id="navbar"></header>
+
+  <main class="container">
+    <div class="page-head">
+      <div>
+        <h1>Dashboard</h1>
+        <p class="muted">Overview of all reported civic issues.</p>
+      </div>
+      <a href="create-issue.html"><button class="btn">+ Report new issue</button></a>
+    </div>
+
+    <section class="stats">
+      <div class="stat-card accent">
+        <div class="label">Total Issues</div>
+        <div class="value" id="totalCount">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Pending</div>
+        <div class="value" id="pendingCount">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">In Progress</div>
+        <div class="value" id="inProgressCount">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Resolved</div>
+        <div class="value" id="resolvedCount">—</div>
+      </div>
+    </section>
+
+    <div class="card">
+      <h2>Quick navigation</h2>
+      <p class="muted">Jump straight to the action you need.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+        <a href="create-issue.html"><button class="btn">Create Issue</button></a>
+        <a href="view-issues.html"><button class="btn ghost">View All Issues</button></a>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    requireAuth();
+    renderNavbar("dashboard");
+
+    (async () => {
+      try {
+        const data = await api("/issues/all");
+        const issues = data.issues || [];
+        document.getElementById("totalCount").textContent = issues.length;
+        document.getElementById("pendingCount").textContent    = issues.filter(i => i.status === "Pending").length;
+        document.getElementById("inProgressCount").textContent = issues.filter(i => i.status === "In Progress").length;
+        document.getElementById("resolvedCount").textContent   = issues.filter(i => i.status === "Resolved").length;
+      } catch (err) {
+        ["totalCount","pendingCount","inProgressCount","resolvedCount"]
+          .forEach(id => document.getElementById(id).textContent = "0");
+        console.error(err);
+      }
+    })();
+  </script>
+</body>
+</html>

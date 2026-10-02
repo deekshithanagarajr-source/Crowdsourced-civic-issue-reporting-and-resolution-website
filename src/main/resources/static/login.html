@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Civic Reporter</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="navbar" id="navbar"></header>
+
+  <main class="center-card">
+    <div class="card">
+      <h1>Welcome back</h1>
+      <p class="muted">Sign in to report and track civic issues.</p>
+      <div id="alert" class="alert"></div>
+      <form id="loginForm">
+		<div class="field">
+		  <label for="username">Username</label>
+		  <input type="text" id="username" name="username" required>
+		</div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required>
+        </div>
+        <button class="btn full" type="submit">Login</button>
+      </form>
+      <div class="form-foot">
+        Don't have an account? <a href="register.html">Register</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+      redirectIfAuthed();
+      renderNavbar("login");
+
+	  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+	    e.preventDefault();
+	    clearAlert("alert");
+	    const username = document.getElementById("username").value.trim();
+	    const password = document.getElementById("password").value;
+	    try {
+	      const data = await api("/api/auth/login", {
+	        method: "POST",
+	        body: JSON.stringify({ username, password }),
+	      });
+	      setUser(data.user);
+	      window.location.href = "dashboard.html";
+	    } catch (err) {
+	      showAlert("alert", "error", err.message);
+	    }
+	  });
+  </script>
+</body>
+</html>

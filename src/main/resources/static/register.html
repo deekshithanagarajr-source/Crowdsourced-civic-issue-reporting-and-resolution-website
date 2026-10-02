@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — Civic Reporter</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="navbar" id="navbar"></header>
+
+  <main class="center-card">
+    <div class="card">
+      <h1>Create your account</h1>
+      <p class="muted">Join your community in keeping the city better.</p>
+      <div id="alert" class="alert"></div>
+      <form id="registerForm">
+        <div class="field">
+          <label for="username">Username</label>
+          <input type="text" id="username" minlength="3" maxlength="50" required>
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" maxlength="120" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" minlength="6" maxlength="120" required>
+        </div>
+        <button class="btn full" type="submit">Register</button>
+      </form>
+      <div class="form-foot">
+        Already have an account? <a href="login.html">Login</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    redirectIfAuthed();
+    renderNavbar("register");
+
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearAlert("alert");
+      const username = document.getElementById("username").value.trim();
+      const email    = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      try {
+		const data = await api("/api/auth/register", {
+          method: "POST",
+          body: JSON.stringify({ username, email, password }),
+        });
+        setUser(data.user);
+        window.location.href = "dashboard.html";
+      } catch (err) {
+        showAlert("alert", "error", err.message);
+      }
+    });
+  </script>
+</body>
+</html>
